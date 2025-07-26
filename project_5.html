@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Budget Tracker - Aman's Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .dashboard-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .expense-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+        
+        .expense-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+        
+        .expense-category {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .category-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+        
+        .food { background: #ff6b6b; }
+        .transport { background: #4ecdc4; }
+        .entertainment { background: #45b7d1; }
+        .shopping { background: #96ceb4; }
+        .bills { background: #feca57; }
+        .health { background: #ff9ff3; }
+        
+        .add-expense-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .add-expense-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .expense-form {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .form-input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        
+        .chart-container {
+            height: 300px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <div class="container mx-auto px-6 py-12">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-bold mb-4 text-white">Smart Budget Tracker</h1>
+            <p class="text-xl text-white max-w-3xl mx-auto">
+                Take control of your finances with this easy-to-use budget tracker. 
+                Monitor expenses, set budgets, and achieve your financial goals.
+            </p>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <div class="stat-card">
+                <i class="fas fa-wallet text-3xl mb-3"></i>
+                <h3 class="text-2xl font-bold">$2,450</h3>
+                <p>Total Balance</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-arrow-down text-3xl mb-3"></i>
+                <h3 class="text-2xl font-bold">$1,250</h3>
+                <p>This Month Spent</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-piggy-bank text-3xl mb-3"></i>
+                <h3 class="text-2xl font-bold">$800</h3>
+                <p>Savings Goal</p>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Expense List -->
+            <div class="dashboard-card">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Recent Expenses</h2>
+                    <button class="add-expense-btn" onclick="toggleExpenseForm()">
+                        <i class="fas fa-plus mr-2"></i>Add Expense
+                    </button>
+                </div>
+                
+                <!-- Add Expense Form -->
+                <div class="expense-form" id="expenseForm">
+                    <h3 class="text-lg font-bold mb-4">Add New Expense</h3>
+                    <input type="text" class="form-input" placeholder="Description" id="expenseDescription">
+                    <input type="number" class="form-input" placeholder="Amount" id="expenseAmount">
+                    <select class="form-input" id="expenseCategory">
+                        <option value="">Select Category</option>
+                        <option value="food">Food & Dining</option>
+                        <option value="transport">Transportation</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="shopping">Shopping</option>
+                        <option value="bills">Bills & Utilities</option>
+                        <option value="health">Health & Medical</option>
+                    </select>
+                    <div class="flex gap-3">
+                        <button class="add-expense-btn flex-1" onclick="addExpense()">Add Expense</button>
+                        <button class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg" onclick="toggleExpenseForm()">Cancel</button>
+                    </div>
+                </div>
+                
+                <div class="expense-list" id="expenseList">
+                    <div class="expense-item">
+                        <div class="expense-category">
+                            <div class="category-icon food">
+                                <i class="fas fa-utensils"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold">Lunch at Cafe</p>
+                                <p class="text-sm text-gray-500">Today</p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-red-500">-$25.50</span>
+                    </div>
+                    
+                    <div class="expense-item">
+                        <div class="expense-category">
+                            <div class="category-icon transport">
+                                <i class="fas fa-car"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold">Gas Station</p>
+                                <p class="text-sm text-gray-500">Yesterday</p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-red-500">-$45.00</span>
+                    </div>
+                    
+                    <div class="expense-item">
+                        <div class="expense-category">
+                            <div class="category-icon entertainment">
+                                <i class="fas fa-film"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold">Movie Tickets</p>
+                                <p class="text-sm text-gray-500">2 days ago</p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-red-500">-$32.00</span>
+                    </div>
+                    
+                    <div class="expense-item">
+                        <div class="expense-category">
+                            <div class="category-icon shopping">
+                                <i class="fas fa-shopping-bag"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold">Grocery Store</p>
+                                <p class="text-sm text-gray-500">3 days ago</p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-red-500">-$85.75</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts and Analytics -->
+            <div class="dashboard-card">
+                <h2 class="text-2xl font-bold mb-6">Spending Analysis</h2>
+                
+                <!-- Category Breakdown Chart -->
+                <div class="chart-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+                
+                <!-- Budget Progress -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-bold mb-4">Monthly Budget Progress</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <span>Food & Dining</span>
+                                <span>$350 / $500</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="bg-gradient-to-r from-green-400 to-blue-500 h-3 rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <span>Transportation</span>
+                                <span>$200 / $300</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full" style="width: 67%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <span>Entertainment</span>
+                                <span>$120 / $200</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="bg-gradient-to-r from-purple-400 to-pink-500 h-3 rounded-full" style="width: 60%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technology Stack -->
+        <div class="text-center mt-12">
+            <h3 class="text-2xl font-bold mb-6 text-white">Built With</h3>
+            <div class="flex flex-wrap justify-center gap-3">
+                <span class="bg-white text-gray-800 px-4 py-2 rounded-full font-semibold">HTML5</span>
+                <span class="bg-white text-gray-800 px-4 py-2 rounded-full font-semibold">JavaScript</span>
+                <span class="bg-white text-gray-800 px-4 py-2 rounded-full font-semibold">Chart.js</span>
+                <span class="bg-white text-gray-800 px-4 py-2 rounded-full font-semibold">Tailwind CSS</span>
+                <span class="bg-white text-gray-800 px-4 py-2 rounded-full font-semibold">Local Storage</span>
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div class="text-center mt-12">
+            <a href="index.html" class="inline-flex items-center px-6 py-3 bg-white text-purple-600 font-semibold rounded-lg hover:bg-gray-100 transition-all duration-300">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Portfolio
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Chart
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        const categoryChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Food & Dining', 'Transportation', 'Entertainment', 'Shopping', 'Bills', 'Health'],
+                datasets: [{
+                    data: [350, 200, 120, 180, 150, 80],
+                    backgroundColor: [
+                        '#ff6b6b',
+                        '#4ecdc4',
+                        '#45b7d1',
+                        '#96ceb4',
+                        '#feca57',
+                        '#ff9ff3'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+
+        // Toggle expense form
+        function toggleExpenseForm() {
+            const form = document.getElementById('expenseForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Add new expense
+        function addExpense() {
+            const description = document.getElementById('expenseDescription').value;
+            const amount = document.getElementById('expenseAmount').value;
+            const category = document.getElementById('expenseCategory').value;
+
+            if (description && amount && category) {
+                const expenseList = document.getElementById('expenseList');
+                const categoryIcons = {
+                    food: 'fa-utensils',
+                    transport: 'fa-car',
+                    entertainment: 'fa-film',
+                    shopping: 'fa-shopping-bag',
+                    bills: 'fa-file-invoice-dollar',
+                    health: 'fa-heart'
+                };
+
+                const newExpense = document.createElement('div');
+                newExpense.className = 'expense-item';
+                newExpense.innerHTML = `
+                    <div class="expense-category">
+                        <div class="category-icon ${category}">
+                            <i class="fas ${categoryIcons[category]}"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold">${description}</p>
+                            <p class="text-sm text-gray-500">Just now</p>
+                        </div>
+                    </div>
+                    <span class="font-bold text-red-500">-$${amount}</span>
+                `;
+
+                expenseList.insertBefore(newExpense, expenseList.firstChild);
+
+                // Clear form and hide it
+                document.getElementById('expenseDescription').value = '';
+                document.getElementById('expenseAmount').value = '';
+                document.getElementById('expenseCategory').value = '';
+                toggleExpenseForm();
+
+                // Show success message
+                showNotification('Expense added successfully!');
+            } else {
+                showNotification('Please fill all fields!');
+            }
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

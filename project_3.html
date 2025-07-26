@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Story Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Lora', serif;
+            background-color: #fdf6e3; /* Solarized Light */
+            color: #657b83;
+        }
+        .choice-btn {
+            background-color: #eee8d5;
+            border: 1px solid #93a1a1;
+            transition: all 0.2s ease-in-out;
+        }
+        .choice-btn:hover {
+            background-color: #fdf6e3;
+            border-color: #586e75;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="max-w-3xl w-full bg-white/50 backdrop-blur-sm p-8 rounded-lg shadow-lg border border-gray-200">
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-gray-800">The Endless Story</h1>
+            <p class="text-gray-600 mt-1">Your adventure, written by AI.</p>
+        </header>
+
+        <div id="story-container">
+            <div id="story-text" class="text-lg leading-relaxed mb-6"></div>
+            <div id="choices-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div id="loader" class="text-center hidden p-4">
+                <p class="text-gray-500">The storyteller is thinking...</p>
+            </div>
+        </div>
+        <div id="start-container" class="text-center">
+            <p class="mb-4 text-lg">Choose a genre to begin your adventure:</p>
+            <div class="flex justify-center gap-4 flex-wrap">
+                <button class="start-btn text-lg px-6 py-3 rounded-lg choice-btn" data-genre="Fantasy">Fantasy</button>
+                <button class="start-btn text-lg px-6 py-3 rounded-lg choice-btn" data-genre="Sci-Fi">Sci-Fi</button>
+                <button class="start-btn text-lg px-6 py-3 rounded-lg choice-btn" data-genre="Mystery">Mystery</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const storyTextDiv = document.getElementById('story-text');
+        const choicesContainer = document.getElementById('choices-container');
+        const loader = document.getElementById('loader');
+        const startContainer = document.getElementById('start-container');
+        let storyHistory = [];
+
+        startContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('start-btn')) {
+                const genre = e.target.dataset.genre;
+                startContainer.classList.add('hidden');
+                generateStory(`Start a new interactive story in the ${genre} genre. Begin with an engaging opening paragraph.`);
+            }
+        });
+
+        choicesContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('choice-btn')) {
+                const choiceText = e.target.textContent;
+                generateStory(`The user chose the option: "${choiceText}". Continue the story from there.`);
+            }
+        });
+
+        async function generateStory(prompt) {
+            loader.classList.remove('hidden');
+            choicesContainer.innerHTML = '';
+            
+            storyHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+            const fullPrompt = `You are an interactive fiction AI. Continue the story based on the user's choice. Provide the next part of the story (about 2-3 paragraphs). Then, present the user with exactly two distinct choices for what to do next. The response must be a JSON object with two keys: "story" (a string for the story text) and "choices" (an array of two strings).
+            
+            Here is the story so far: ${JSON.stringify(storyHistory)}`;
+
+            try {
+                const jsonResponse = await callGeminiForJson(fullPrompt);
+                storyHistory.push({ role: "model", parts: [{ text: JSON.stringify(jsonResponse) }] });
+
+                storyTextDiv.innerHTML += `<p>${jsonResponse.story}</p>`;
+                displayChoices(jsonResponse.choices);
+
+            } catch (err) {
+                console.error(err);
+                storyTextDiv.innerHTML += `<p class="text-red-500">The storyteller seems to have lost their train of thought. Please refresh to start a new tale.</p>`;
+            } finally {
+                loader.classList.add('hidden');
+                window.scrollTo(0, document.body.scrollHeight);
+            }
+        }
+
+        function displayChoices(choices) {
+            choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.textContent = choice;
+                button.className = 'w-full p-4 rounded-lg choice-btn text-left';
+                choicesContainer.appendChild(button);
+            });
+        }
+
+        async function callGeminiForJson(prompt) {
+            const apiKey = "AIzaSyB5kcE3nZLN0yA8FYQR9AZHlc7y600DJyo";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            story: { type: "STRING" },
+                            choices: { type: "ARRAY", items: { type: "STRING" } }
+                        },
+                        required: ["story", "choices"]
+                    }
+                }
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+            
+            const result = await response.json();
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                return JSON.parse(result.candidates[0].content.parts[0].text);
+            } else {
+                throw new Error("Invalid response structure from API.");
+            }
+        }
+    </script>
+</body>
+</html>
